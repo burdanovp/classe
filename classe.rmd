@@ -1,0 +1,48 @@
+# Human activity grading prediction
+
+The dataset contains the variables measured from accelerometers on the participants and grades
+assigned to the quality of their exercises. I predict the grades by the variables.
+
+## Data loading and preprocessing
+
+The dataset has many columns filled by NA. I remove these columns and first 7 columns containing
+dates and other metainformation.
+
+```{r}
+library(caret)
+pml <- read.csv("pml-training.csv", na.strings=c("NA", "", "#DIV/0!"))
+pml <- pml[,colSums(is.na(pml)) < 19000]
+pml <- pml[,-(1:7)]
+```
+
+## Train and test sets
+
+I assign 60% of data to the training set and remaining 40% to the test set.
+
+```{r}
+set.seed(666)
+trainIdx <- createDataPartition(y=pml$classe, p=0.6, list=F)
+train <- pml[trainIdx,]
+test <- pml[-trainIdx,]
+```
+
+## Machine learning
+
+I use random forests with 25-reps bootstrap.
+
+```{r}
+set.seed(666)
+fit <- train(classe~., data=train, method="rf")
+fit
+```
+
+The cross-validation error is `r round(100 * (1 - max(fit$results$Accuracy)), 1)`%.
+
+I test the random forest on the test data.
+
+```{r}
+predictions <- predict(fit, newdata=test)
+confusionMatrix(predictions, test$classe)
+```
+
+The test set error is `r round(100 * (1 - mean(predictions == test$classe)), 1)`%.
